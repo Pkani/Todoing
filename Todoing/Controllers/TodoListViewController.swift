@@ -10,29 +10,37 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
     
+    
     var itemArray = [Item]()   // array of Item objects
-    let defaults = UserDefaults.standard
+    // let defaults = UserDefaults.standard // this is a singleton for user default setting
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         
-        let newItem = Item()  // new object is created with help of Item class in Data model folder
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
+
         
-        let newItem2 = Item()
-        newItem2.title = "Buy Eggs"
-        itemArray.append(newItem2)
+        print(dataFilePath!)
         
-        let newItem3 = Item()
-        newItem3.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
+//        let newItem = Item()  // new object is created with help of Item class in Data model folder
+//        newItem.title = "Find Mike"
+//        itemArray.append(newItem)
+//
+//        let newItem2 = Item()
+//        newItem2.title = "Buy Eggs"
+//        itemArray.append(newItem2)
+//
+//        let newItem3 = Item()
+//        newItem3.title = "Destroy Demogorgon"
+//        itemArray.append(newItem3)
 
         // here items that saved in user default file that loads up when app load
-        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-            itemArray = items
-        }
+//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
+//            itemArray = items
+//        }
+        
+        loadItems()
     }
 
     //MARK: - Tableview Datasource Methods
@@ -73,7 +81,8 @@ class TodoListViewController: UITableViewController {
 //        }
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done // work same as above if else code
         
-        tableView.reloadData()
+        saveItems()
+        
         
         // following is to use checkmark selected when click and deselected when click again
         //tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
@@ -101,10 +110,10 @@ class TodoListViewController: UITableViewController {
             newItem.title = textField.text!
             
             self.itemArray.append(newItem)
-            self.defaults.set(self.itemArray, forKey: "TodoListArray") // add data in user default
+            //self.defaults.set(self.itemArray, forKey: "TodoListArray") // add data in user default
             
-            // to get new data into itemArray
-            self.tableView.reloadData()
+            self.saveItems()
+            
         }
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create new Item"
@@ -117,5 +126,31 @@ class TodoListViewController: UITableViewController {
         
     }
     
+    // MARK:- Model Manupulation Methods
+    func saveItems() {
+        let encoder = PropertyListEncoder() // this encode data type into plist
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Error encoding item array, \(error)")
+        }
+        
+        // to get new data into itemArray
+        tableView.reloadData()
+    }
+    
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+                let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data) // here Item is data type
+            }catch {
+                print("Error decoding item array \(error)")
+            }
+            
+            }
+        }
 }
 
