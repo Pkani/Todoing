@@ -13,9 +13,13 @@ class TodoListViewController: UITableViewController {
     
     
     var itemArray = [Item]()   // array of Item objects
-    // let defaults = UserDefaults.standard // this is a singleton for user default setting
-    //let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist") // this use when we save data in plist file
-    // here UIApplication.shared is a singleton
+    
+    var selectedCategory : Category? { // this execute when a category selected
+        didSet{
+            loadItems()
+        }
+    }
+
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext // here UIApplication.shared is use to create object from AppDelegate class method
 
     override func viewDidLoad() {
@@ -24,24 +28,7 @@ class TodoListViewController: UITableViewController {
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-//        let newItem = Item()  // new object is created with help of Item class in Data model folder
-//        newItem.title = "Find Mike"
-//        itemArray.append(newItem)
-//
-//        let newItem2 = Item()
-//        newItem2.title = "Buy Eggs"
-//        itemArray.append(newItem2)
-//
-//        let newItem3 = Item()
-//        newItem3.title = "Destroy Demogorgon"
-//        itemArray.append(newItem3)
-
-        // here items that saved in user default file that loads up when app load
-//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-//            itemArray = items
-//        }
         
-        loadItems()
     }
 
     //MARK: - Tableview Datasource Methods
@@ -115,6 +102,7 @@ class TodoListViewController: UITableViewController {
             let newItem = Item(context: self.context)
             newItem.title = textField.text!
             newItem.done = false
+            newItem.parentCategory = self.selectedCategory
             
             self.itemArray.append(newItem)
             //self.defaults.set(self.itemArray, forKey: "TodoListArray") // add data in user default
@@ -146,14 +134,32 @@ class TodoListViewController: UITableViewController {
         tableView.reloadData()
     }
     
-    func loadItems() { // to read data from Item entity
-        let request:NSFetchRequest<Item> = Item.fetchRequest()
+    // here with is external paramerer and request is internal parameter
+    // here we assign default value of with: parameter as item.fetchRequest() to load whole data in to viewcontroller
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) { // to read data from Item entity
+        //let request:NSFetchRequest<Item> = Item.fetchRequest()
+        
+        // to fetch data for selected category
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
+//        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate ,predicate])
+//
+//        request.predicate = compoundPredicate
+        
         do {
             itemArray = try context.fetch(request)
         } catch {
             print("Error fatching data from context \(error)")
         }
+        
+        tableView.reloadData()
     }
+    
     
 
 }
@@ -165,16 +171,24 @@ extension TodoListViewController: UISearchBarDelegate {
         let request : NSFetchRequest<Item> = Item.fetchRequest()
         
         // [cd] c is for CASE sensitive and d is for diacritic sensitive
-        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)  // %@ use for any argument pass in
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)  // %@ use for any argument pass in
         
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
         //request.sortDescriptors = [sortDescriptor]
         
-        do {
-            itemArray = try context.fetch(request)
-        } catch {
-            print("Error fatching data from context \(error)")
-        }
-        tableView.reloadData()
+        loadItems(with: request, predicate: predicate)  // here with is external parameter for loadItem
     }
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            // dispatchQueue is prioritize process so it manage thread for app works
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()  // this is to stop cursor and lower key board
+            }
+            
+            
+        }
+    }
+    
 }
