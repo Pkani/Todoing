@@ -7,13 +7,17 @@
 //
 
 import UIKit
-import CoreData
+//import CoreData
+import RealmSwift
 
 class CategotyTableViewController: UITableViewController {
     
-    var categoryArray = [Category]()
+    let realm = try! Realm()  // here try! is for avoid error throw when realm initialize
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    // result data type auto update so no need to append new category to it
+    // ? is use that this optional unwrape and ! is force unwrape
+    var categories: Results<Category>?   // results is data type associated with realm
+    
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,14 +28,15 @@ class CategotyTableViewController: UITableViewController {
     }
     //MARK: - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        // if categories is not nil it uses count and if nil it uses 1
+        return categories?.count ?? 1  // Nil coalescing operator
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         //let newCell = UITableViewCell(style: .default, reuseIdentifier: "CategoryCell")
         let newCell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
         
-        let categories = categoryArray[indexPath.row]
-        newCell.textLabel?.text = categories.name
+        //  ?? Nil coalescing operator
+        newCell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories added." // this mean categories? optional is not nil we get the item indexPath.row but if it is nil (??) we use "No categories added."
         
         return newCell
         
@@ -47,24 +52,26 @@ class CategotyTableViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row]        }
+            destinationVC.selectedCategory = categories?[indexPath.row]
+            
+        }
     }
     
     //MARK: - Data Manipulation Methods
     
-    func loadCategory(_ request: NSFetchRequest<Category> = Category.fetchRequest()) {
-        //let request:NSFetchRequest<Item> = Item.fetchRequest()
+    func loadCategory() {
         
-        do {
-            try categoryArray = context.fetch(request)
-        } catch {
-            print("Error loading categories \(error)")
-        }
+        categories = realm.objects(Category.self)
+        
+        tableView.reloadData()
+        
     }
     
-    func saveCategory() {
+    func save(category: Category) {
         do {
-            try context.save()
+            try realm.write {
+                realm.add(category)
+            }
         }catch {
             print("Error saving category \(error)")
         }
@@ -81,12 +88,11 @@ class CategotyTableViewController: UITableViewController {
         let alert = UIAlertController(title: "Add new category", message: "add more item into it", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             newCategory.name = textField.text!
             
-            self.categoryArray.append(newCategory)
             
-            self.saveCategory()
+            self.save(category: newCategory)
         }
         // this add text field in alert popup
         alert.addTextField { (field) in
@@ -97,13 +103,6 @@ class CategotyTableViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-    
-    
-
-
-    
-    
-    
     
     
 }
