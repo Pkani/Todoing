@@ -57,6 +57,31 @@ class CategotyTableViewController: UITableViewController {
         }
     }
     
+    
+    // MARK: Swipe action
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let delete = deleteAction(at: indexPath)
+        return UISwipeActionsConfiguration(actions: [delete])
+    }
+    
+    func deleteAction(at indexPath: IndexPath) -> UIContextualAction {
+        let action = UIContextualAction(style: .destructive, title: "Delete") { (action, view, completion) in
+            if let category = self.categories?[indexPath.row] {  // here ? is use for optional as we defined above that categories is optional
+                do {
+                    try self.realm.write {
+                        self.realm.delete(category)   // to delete items
+                    }
+                }catch {
+                    print("Error saving done status \(error)")
+                }
+            }
+            completion(true)
+        }
+        action.image = UIImage(named: "Trash Icon")
+        action.backgroundColor = .red
+        return action
+    }
+    
     //MARK: - Data Manipulation Methods
     
     func loadCategory() {

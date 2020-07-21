@@ -50,6 +50,84 @@ class TodoListViewController: UITableViewController {
         return todoItems?.count ?? 1
     }
     
+    
+    // MARK: Swipe Action and related UI
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let important = importantAction(at: indexPath)
+        let delete = deleteAction(at: indexPath)
+        
+        return UISwipeActionsConfiguration(actions: [delete, important])
+    }
+    
+    override func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let complete = completionAction(at: indexPath)
+        
+        return UISwipeActionsConfiguration(actions: [complete])
+    }
+    
+    func importantAction(at indexPath: IndexPath) -> UIContextualAction {
+        let item = self.todoItems?[indexPath.row]
+        let action = UIContextualAction(style: .normal, title: "important") { (action, view, completion) in
+            if let item = self.todoItems?[indexPath.row] {
+                do {
+                    try self.realm.write {
+                        item.isImportant = !item.isImportant
+                        
+                    }
+                }catch {
+                    print("Error saving done status \(error)")
+                }
+            }
+            completion(true)
+        }
+        action.image = UIImage(named: "Archive Icon")
+        action.backgroundColor = (item!.isImportant) ? .purple : .gray
+        return action
+    }
+    
+    
+    
+    func deleteAction(at indexPath: IndexPath) -> UIContextualAction {
+        let action = UIContextualAction(style: .destructive, title: "Delete") { (action, view, completion) in
+            if let item = self.todoItems?[indexPath.row] {
+                do {
+                    try self.realm.write {
+                        self.realm.delete(item)   // to delete items
+                    }
+                }catch {
+                    print("Error saving done status \(error)")
+                }
+            }
+            completion(true)
+        }
+        action.image = UIImage(named: "Trash Icon")
+        action.backgroundColor = .red
+        return action
+    }
+    
+    func completionAction(at indexPath: IndexPath) -> UIContextualAction {
+        let action = UIContextualAction(style: .destructive, title: "Complete") { (action, view, completion) in
+//            let strike = self.todoItems?[indexPath.row].title
+            
+//            let attributeString: NSMutableAttributedString = NSMutableAttributedString(string: strike!)
+//            attributeString.addAttribute(NSAttributedStringKey.strikethroughStyle, value: 2, range: NSMakeRange(0, attributeString.length))
+//            self.todoItems?[indexPath.row].title = attributeString.attributedText
+            if let item = self.todoItems?[indexPath.row] {
+                do {
+                    try self.realm.write {
+                        self.realm.delete(item)   // to delete items
+                    }
+                }catch {
+                    print("Error saving done status \(error)")
+                }
+            }
+            completion(true)
+        }
+        action.image = UIImage(named: "Flag Icon")
+        action.backgroundColor = .green
+        return action
+    }
+ 
     //MARK:- TableView Delegate method
     // following function is use for which row is selected
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
